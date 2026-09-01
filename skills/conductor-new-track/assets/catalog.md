@@ -147,19 +147,3 @@ on Google Cloud.
     -   **Keywords**: `Terraform`, `GCP`, `GCS Backend`, `Infrastructure as
         Code`, `IaC`
 
-## Security Skills
-
-Skills focused on automated AI code security analysis, vulnerability verification, and safe patch remediation.
-
-### gcp-codemender
-
--   **Description**: Google Cloud's automated AI code security agent for scanning,
-    exploit verification, and automated vulnerability remediation.
--   **URL**:
-    https://raw.githubusercontent.com/gemini-cli-extensions/devops/main/skills/gcp-codemender/
--   **Party**: 1p
--   **Detection Signals**:
-    -   **Dependencies**: `cm`, `gcloud`
-    -   **Keywords**: `CodeMender`, `Security`, `Vulnerability`, `SAST`, `AppSec`,
-        `Remediation`, `CVE`, `Exploit`
-
