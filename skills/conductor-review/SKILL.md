@@ -77,14 +77,16 @@ Before starting the review process, you MUST locate and read the project's found
     -   **Extract Commits:** Parse `plan.md` to find recorded git commit hashes (usually in the "Completed" tasks or "History" section).
     -   **Determine Revision Range:** Identify the start (first commit parent) and end (last commit).
 3.  **Load and Analyze Changes (Smart Chunking):**
-    -   **Volume Check:** Run `git diff --shortstat <revision_range> -- . ':!conductor'` first.
+    -   **Volume Check:**
+        -   Run `git diff --shortstat <revision_range> -- . ':!conductor' ':!*.lock' ':!package-lock.json'`
+        -   Count changed source files: `git diff --name-only <revision_range> -- . ':!conductor' ':!*.lock' ':!package-lock.json' | wc -l`
     -   **Strategy Selection:**
-        -   **Small/Medium Changes (< 300 lines):**
-            -   Run `git diff <revision_range> -- . ':!conductor'` to get the full context in one go.
+        -   **Standard Changes (< 1,000 lines AND <= 15 files):**
+            -   Run `git diff <revision_range> -- . ':!conductor' ':!*.lock' ':!package-lock.json'` to get the full context in one go.
             -   Proceed to "Analyze and Verify".
-        -   **Large Changes (> 300 lines):**
-            -   **Confirm:** Ask the user for confirmation using a **Yes/No question** to proceed with a large review (explaining that it involves >300 lines of changes and will use 'Iterative Review Mode' which may take longer).
-            -   **List Files:** Run `git diff --name-only <revision_range> -- . ':!conductor'`.
+        -   **Large / Multi-File Changes (>= 1,000 lines OR > 15 files):**
+            -   **Confirm:** Ask the user for confirmation using a **Yes/No question** to proceed with a large review (explaining that it involves >= 1,000 lines or > 15 files and will use 'Iterative Review Mode' which may take longer).
+            -   **List Files:** Run `git diff --name-only <revision_range> -- . ':!conductor' ':!*.lock' ':!package-lock.json'`.
             -   **Iterate:** For each source file (ignore locks/assets):
                 1.  Run `git diff <revision_range> -- <file_path>`.
                 2.  Perform the "Analyze and Verify" checks on this specific chunk.
@@ -100,7 +102,28 @@ Before starting the review process, you MUST locate and read the project's found
     -   Does it strictly follow `conductor/code_styleguides/*.md`?
 3.  **Correctness & Safety:**
     -   Look for bugs, race conditions, null pointer risks.
-    -   **Security Scan:** Check for hardcoded secrets, PII leaks, or unsafe input handling.
+    -   **Security Scan (CodeMender Integration):**
+        -   **Prompt for Deep Security Scan:** Ask the user if they would like to execute a deep CodeMender AI security scan on the modified files using a **single-choice question** with options:
+            -   **Run CodeMender Security Scan (Recommended):** *Executes targeted `cm find` and sandbox `cm verify` on changed files to scan and verify vulnerabilities.*
+            -   **Standard Review Only:** *Performs heuristic static checks and unit tests without external GCP security scanning.*
+            -   **Skip Security Checks:** *Bypasses security scan checks.*
+        -   **Prerequisite Disclosure:** When presenting this choice, clearly disclose the requirements:
+            -   *Google Cloud APIs:* `aiplatform.googleapis.com` (Vertex AI) and `cloudresourcemanager.googleapis.com` enabled.
+            -   *Permissions:* `roles/aiplatform.user` assigned to the active principal.
+            -   *Authentication:* Application Default Credentials configured (`gcloud auth application-default login`).
+            -   *Billing & Model:* Runs on Gemini 3.7 Flash by default; billed via Google Cloud Vertex AI token consumption.
+        -   **Execution Workflow (if CodeMender selected):**
+            1.  **Check CLI & Auth:** Verify `cm` is available (`which cm` / `cm --version`). If missing or unauthenticated, warn the user and fall back to heuristic checks.
+            2.  **Scan Changed Files:** Run `cm find` scoped strictly to modified source files:
+                ```bash
+                FILES=$(git diff --name-only <revision_range> -- . ':!conductor' ':!*.lock' ':!package-lock.json')
+                cm find $FILES --compact -y
+                ```
+            3.  **Verify Exploitability (Eliminate False Positives):** For any detected finding in `OPEN` state (retrieved from `cm report --status OPEN` or the scan output), run proof-of-concept verification in the local sandbox:
+                ```bash
+                cm verify <FINDING_ID> -y
+                ```
+            4.  **Record Findings:** Treat verified findings as **High** or **Critical** severity and include them in the findings report.
 4.  **Testing:**
     -   Are there new tests?
     -   Do the changes look like they are covered by existing tests?
@@ -119,6 +142,7 @@ Before starting the review process, you MUST locate and read the project's found
 ## Verification Checks
 - [ ] **Plan Compliance**: [Yes/No/Partial] - [Comment]
 - [ ] **Style Compliance**: [Pass/Fail]
+- [ ] **CodeMender Security Audit**: [Passed/Failed/Skipped] - [Summary of findings or 'No vulnerabilities found']
 - [ ] **New Tests**: [Yes/No]
 - [ ] **Test Coverage**: [Yes/No/Partial]
 - [ ] **Test Results**: [Passed/Failed] - [Summary of failing tests or 'All passed']
@@ -126,7 +150,7 @@ Before starting the review process, you MUST locate and read the project's found
 ## Findings
 *(Only include this section if issues are found)*
 
-### [Critical/High/Medium/Low] Description of Issue
+### [Critical/High/Medium/Low] [CodeMender: <FINDING_ID> / General] Description of Issue
 - **File**: `path/to/file` (Lines L<Start>-L<End>)
 - **Context**: [Why is this an issue?]
 - **Suggestion**:
@@ -149,7 +173,7 @@ Before starting the review process, you MUST locate and read the project's found
         - Announce: "Everything looks great! I don't see any issues."
 2.  **Action:**
     -   **If issues found:** Ask the user how they would like to proceed with the findings using a **multiple-choice** question with the following options:
-        -   **Apply Fixes:** Automatically apply the suggested code changes using file editing tools, then proceed to the next step.
+        -   **Apply Fixes:** Automatically apply the suggested code changes. For CodeMender findings, execute `cm fix <FINDING_ID> -y -c "Follow project guidelines in conductor/code_styleguides/"` (which validates the fix against `build.command` in the sandbox before modifying workspace files). For general issues, apply file edits directly. Then proceed to the next step.
         -   **Manual Fix:** Terminate operation to allow the user to edit the code themselves.
         -   **Complete Track:** Ignore warnings and proceed to the next step.
     -   **If no issues found:** Proceed to the next step.

@@ -252,7 +252,7 @@ Command                          | Description                                  
 `/conductor:conductor-implement` | Executes the tasks defined in the current track's plan.                                 | `conductor/tracks.md`<br>`conductor/tracks/<id>/plan.md`
 `/conductor:conductor-status`    | Displays the current progress of the tracks file and active tracks.                     | Reads `conductor/tracks.md`
 `/conductor:conductor-revert`    | Reverts a track, phase, or task by analyzing git history.                               | Reverts git history
-`/conductor:conductor-review`    | Reviews completed work against guidelines and the plan.                                 | Reads `plan.md`, `product-guidelines.md`
+`/conductor:conductor-review`    | Reviews completed work against guidelines, tests, and CodeMender security audits.       | Reads `plan.md`, `product-guidelines.md`
 
 --------------------------------------------------------------------------------
 

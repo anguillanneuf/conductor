@@ -139,17 +139,17 @@ that also concludes a phase in `plan.md`.
             tests **must** validate the functionality described in this phase's
             tasks (`plan.md`).
 
-3.  **Execute Automated Tests with Proactive Debugging:**
+3.  **Execute Automated Tests and Security Checks with Proactive Debugging:**
 
     -   Before execution, you **must** announce the exact shell command you will
-        use to run the tests.
-    -   **Example Announcement:** "I will now run the automated test suite to
-        verify the phase. **Command:** `CI=true npm test`"
-    -   Execute the announced command.
-    -   If tests fail, you **must** inform the user and begin debugging. You may
-        attempt to propose a fix a **maximum of two times**. If the tests still
-        fail after your second proposed fix, you **must stop**, report the
-        persistent failure, and ask the user for guidance.
+        use to run the tests and security checks.
+    -   **Example Announcement:** "I will now run the automated test suite and CodeMender security audit to
+        verify the phase. **Commands:** `CI=true npm test` and `cm find . --compact -y`"
+    -   Execute the announced commands.
+    -   If tests fail or vulnerabilities are found, you **must** inform the user and begin debugging/remediating (using `cm verify` / `cm fix` for security findings). You may
+        attempt to propose a fix a **maximum of two times**. If failures
+        persist after your second proposed fix, you **must stop**, report the
+        failure, and ask the user for guidance.
 
 4.  **Propose a Detailed, Actionable Manual Verification Plan:**
 
@@ -161,7 +161,7 @@ that also concludes a phase in `plan.md`.
         expected outcomes.
     -   The plan you present to the user **must** follow this format:
 
-        **For a Frontend Change:** ``` The automated tests have passed. For
+        **For a Frontend Change:** ``` The automated tests and security checks have passed. For
         manual verification, please follow these steps:
 
         **Manual Verification Steps:** 1. **Start the development server with
@@ -169,7 +169,7 @@ that also concludes a phase in `plan.md`.
         `http://localhost:3000` 3. **Confirm that you see:** The new user
         profile page, with the user's name and email displayed correctly. ```
 
-        **For a Backend Change:** ``` The automated tests have passed. For
+        **For a Backend Change:** ``` The automated tests and security checks have passed. For
         manual verification, please follow these steps:
 
         **Manual Verification Steps:** 1. **Ensure the server is running.** 2.
@@ -231,7 +231,7 @@ Before marking any task complete, verify:
     tools)
 -   [ ] Works correctly on mobile (if applicable)
 -   [ ] Documentation updated if needed
--   [ ] No security vulnerabilities introduced
+-   [ ] No security vulnerabilities introduced (verified via CodeMender `cm find` / security scans)
 
 ## Development Commands
 
@@ -241,25 +241,26 @@ language, framework, and build tools.**
 ### Setup
 
 ```bash
-# Example: Commands to set up the development environment (e.g., install dependencies, configure database)
-# e.g., for a Node.js project: npm install
-# e.g., for a Go project: go mod tidy
+# Example: Commands to set up the development environment (e.g., install dependencies, configure database, init CodeMender)
+# e.g., for a Node.js project: npm install && cm init --verify
+# e.g., for a Go project: go mod tidy && cm init --verify
 ```
 
 ### Daily Development
 
 ```bash
-# Example: Commands for common daily tasks (e.g., start dev server, run tests, lint, format)
-# e.g., for a Node.js project: npm run dev, npm test, npm run lint
-# e.g., for a Go project: go run main.go, go test ./..., go fmt ./...
+# Example: Commands for common daily tasks (e.g., start dev server, run tests, lint, security scans)
+# e.g., for a Node.js project: npm run dev, npm test, npm run lint, cm find ./src/ --compact
+# e.g., for a Go project: go run main.go, go test ./..., go fmt ./..., cm find ./... --compact
 ```
 
 ### Before Committing
 
 ```bash
-# Example: Commands to run all pre-commit checks (e.g., format, lint, type check, run tests)
-# e.g., for a Node.js project: npm run check
-# e.g., for a Go project: make check (if a Makefile exists)
+# Example: Commands to run all pre-commit checks (e.g., format, lint, type check, run tests, security scan)
+# e.g., for a Node.js project: npm run check && cm find . -y
+# e.g., for a Go project: make check && cm find . -y
+# Check for any active findings: cm report --status OPEN
 ```
 
 ## Testing Requirements
@@ -371,7 +372,7 @@ A task is complete when:
 2.  Unit tests written and passing
 3.  Code coverage meets project requirements
 4.  Documentation complete (if applicable)
-5.  Code passes all configured linting and static analysis checks
+5.  Code passes all configured linting, static analysis, and CodeMender security checks
 6.  Works beautifully on mobile (if applicable)
 7.  Implementation notes added to `plan.md`
 8.  Changes committed with proper message
